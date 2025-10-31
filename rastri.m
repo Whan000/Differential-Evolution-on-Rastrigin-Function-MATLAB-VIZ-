@@ -1,12 +1,13 @@
 clc; clear; close all;
 %% PARAMETERS
-D = 2;                   % Problem dimension
-NP = 1000;                 % Population size
-F = 0.8;                 % Mutation factor
-CR = 0.9;                % Crossover rate
-GenMax = 1000;            % Maximum generations
-bounds = [-5.12, 5.12];  % Variable bounds
-fitnessThreshold = 0.000001; % Stop if best fitness < this value
+D = 2;                        % Problem dimension
+NP = 1000;                    % Population size
+F = 0.8;                      % Mutation factor
+CR = 0.9;                     % Crossover rate
+GenMax = 1000;                % Maximum generations
+bounds = [-5.12, 5.12];       % Variable bounds
+fitnessThreshold = 0.000001;  % Stop if best fitness < this value
+
 %% INITIALIZATION
 pop = bounds(1) + (bounds(2)-bounds(1))*rand(NP, D);
 fitness = rastrigin(pop);
@@ -17,10 +18,11 @@ zgrid = reshape(zgrid, size(xgrid));
 % Initialize fitness history
 fitnessHistory = zeros(GenMax, 1);
 
-%% CREATE FIGURE
-figure('Position',[100 100 1400 500]);
-tiledlayout(1,3,'Padding','compact','TileSpacing','compact');
+%% CREATE FIGURE WITH 4-PLOT LAYOUT
+figure('Position',[100 100 1600 800]);
+tiledlayout(2,2,'Padding','compact','TileSpacing','compact');
 
+% Plot 1: 3D View
 ax1 = nexttile(1);
 surf(ax1, xgrid, ygrid, zgrid, 'EdgeColor','none');
 colormap(ax1, turbo);
@@ -30,16 +32,20 @@ hold(ax1, 'on'); grid(ax1, 'on'); colorbar(ax1);
 popDots3D = plot3(ax1, pop(:,1), pop(:,2), rastrigin(pop), 'ko', 'MarkerFaceColor','w');
 bestDot3D = plot3(ax1, 0,0,0,'ro','MarkerFaceColor','r','MarkerSize',8);
 
+% Plot 2: 2D Contour View (MAKE THIS SQUARE)
 ax2 = nexttile(2);
 contourf(ax2, xgrid, ygrid, zgrid, 40, 'LineColor','none');
 colormap(ax2, turbo);
 xlabel(ax2, 'x_1'); ylabel(ax2, 'x_2');
 title(ax2, '2D Top View (Population Movement)');
 axis(ax2, [bounds(1) bounds(2) bounds(1) bounds(2)]);
+axis(ax2, 'equal');      % same unit scale
+axis(ax2, 'square');     % square box
 hold(ax2, 'on'); grid(ax2, 'on');
 popDots2D = plot(ax2, pop(:,1), pop(:,2), 'ko', 'MarkerFaceColor','w');
 bestDot2D = plot(ax2, 0,0,'ro','MarkerFaceColor','r','MarkerSize',8);
 
+% Plot 3: Convergence Curve
 ax3 = nexttile(3);
 xlabel(ax3, 'Generation'); ylabel(ax3, 'Best Fitness');
 title(ax3, 'Convergence Curve');
@@ -47,11 +53,36 @@ grid(ax3, 'on');
 hold(ax3, 'on');
 fitnessLine = plot(ax3, 1, 0, 'b-', 'LineWidth', 2);
 xlim(ax3, [1 GenMax]);
-% Create text annotation for generation count
-genText = text(ax3, 0.98, 0.98, '', 'Units', 'normalized', ...
-    'HorizontalAlignment', 'right', 'VerticalAlignment', 'top', ...
-    'FontSize', 10, 'FontWeight', 'bold', 'BackgroundColor', 'white', ...
-    'EdgeColor', 'black', 'Margin', 3);
+
+% Plot 4: Parameter & Status Display
+ax4 = nexttile(4);
+axis(ax4, 'off');
+title(ax4, 'Algorithm Parameters & Status', 'FontSize', 12, 'FontWeight', 'bold');
+
+% Create parameter text display
+paramText = text(ax4, 0.05, 0.95, '', 'Units', 'normalized', ...
+    'HorizontalAlignment', 'left', 'VerticalAlignment', 'top', ...
+    'FontSize', 11, 'FontName', 'Courier New', 'Interpreter', 'none');
+
+% Initial parameter display
+paramStr = sprintf(['DIFFERENTIAL EVOLUTION PARAMETERS\n' ...
+    '=====================================\n\n' ...
+    'Problem Dimension (D):     %d\n' ...
+    'Population Size (NP):      %d\n' ...
+    'Mutation Factor (F):       %.2f\n' ...
+    'Crossover Rate (CR):       %.2f\n' ...
+    'Max Generations:           %d\n' ...
+    'Variable Bounds:           [%.2f, %.2f]\n' ...
+    'Fitness Threshold:         %.6f\n\n' ...
+    'STATUS\n' ...
+    '=====================================\n' ...
+    'Current Generation:        0\n' ...
+    'Best Fitness:              N/A\n' ...
+    'Best Solution:             N/A\n' ...
+    'Convergence:               Not yet'], ...
+    D, NP, F, CR, GenMax, bounds(1), bounds(2), fitnessThreshold);
+
+set(paramText, 'String', paramStr);
 
 %% MAIN LOOP
 converged = false; % Flag to track convergence
@@ -82,46 +113,73 @@ for gen = 1:GenMax
             fitness(i) = fu;
         end
     end
+
     % --- Update visualization ---
     [bestVal, bestIdx] = min(fitness);
     bestSolution = pop(bestIdx, :);
-    
+
     % Store fitness history
     fitnessHistory(gen) = bestVal;
-    
+
     % Check stopping condition
     if bestVal < fitnessThreshold
         converged = true;
         fprintf('*** CONVERGENCE ACHIEVED ***\n');
         fprintf('Generation %d: Best Fitness = %.6f (below threshold %.6f)\n', gen, bestVal, fitnessThreshold);
     end
-    
+
     % Update 3D
     delete(popDots3D); delete(bestDot3D);
     popDots3D = plot3(ax1, pop(:,1), pop(:,2), rastrigin(pop), 'ko', 'MarkerFaceColor','w');
     bestDot3D = plot3(ax1, bestSolution(1), bestSolution(2), bestVal, 'ro','MarkerFaceColor','r','MarkerSize',8);
-    
-    % Update 2D
+
+    % Update 2D (KEEP SQUARE)
     delete(popDots2D); delete(bestDot2D);
     popDots2D = plot(ax2, pop(:,1), pop(:,2), 'ko', 'MarkerFaceColor','w');
     bestDot2D = plot(ax2, bestSolution(1), bestSolution(2), 'ro','MarkerFaceColor','r','MarkerSize',8);
-    
+    axis(ax2, [bounds(1) bounds(2) bounds(1) bounds(2)]);
+    axis(ax2, 'equal');
+    axis(ax2, 'square');
+
     % Update convergence curve
     set(fitnessLine, 'XData', 1:gen, 'YData', fitnessHistory(1:gen));
     ylim(ax3, [0, max(fitnessHistory(1:gen))*1.1]);
-    
-    % Update generation counter text
-    set(genText, 'String', sprintf('Gen: %d/%d\nBest: %.6f', gen, GenMax, bestVal));
-    
+
+    % Update parameter display with current status
+    convergenceStatus = 'Running...';
+    if converged
+        convergenceStatus = sprintf('ACHIEVED at Gen %d!', gen);
+    end
+
+    paramStr = sprintf(['DIFFERENTIAL EVOLUTION PARAMETERS\n' ...
+        '=====================================\n\n' ...
+        'Problem Dimension (D):     %d\n' ...
+        'Population Size (NP):      %d\n' ...
+        'Mutation Factor (F):       %.2f\n' ...
+        'Crossover Rate (CR):       %.2f\n' ...
+        'Max Generations:           %d\n' ...
+        'Variable Bounds:           [%.2f, %.2f]\n' ...
+        'Fitness Threshold:         %.6f\n\n' ...
+        'STATUS\n' ...
+        '=====================================\n' ...
+        'Current Generation:        %d / %d\n' ...
+        'Best Fitness:              %.6f\n' ...
+        'Best Solution:             [%.4f, %.4f]\n' ...
+        'Convergence:               %s'], ...
+        D, NP, F, CR, GenMax, bounds(1), bounds(2), fitnessThreshold, ...
+        gen, GenMax, bestVal, bestSolution(1), bestSolution(2), convergenceStatus);
+
+    set(paramText, 'String', paramStr);
+
     sgtitle(sprintf('Differential Evolution — Generation %d', gen));
     drawnow limitrate;
     pause(0.05);
-    
+
     % Display progress
     if mod(gen,10)==0 || gen==1
         fprintf('Generation %d: Best Fitness = %.6f\n', gen, bestVal);
     end
-    
+
     % Break if convergence achieved
     if converged
         break;
@@ -135,7 +193,7 @@ if converged
 else
     fprintf('COMPLETED: Maximum generations reached\n');
 end
-fprintf('Best Solution Found: [%.4f, %.4f, %.4f]\n', bestSolution(1), bestSolution(2), bestSolution(3));
+fprintf('Best Solution Found: [%.4f, %.4f]\n', bestSolution(1), bestSolution(2));
 fprintf('Function Value: %.6f\n', bestVal);
 
 %% Rastrigin Function
